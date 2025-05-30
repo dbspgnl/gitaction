@@ -30,7 +30,7 @@ jobs:
     
     - name: Test FastAPI app startup
       run: |
-        python -c "from main import app; print('FastAPI app loaded successfully')"
+        python -c "from app.main import app; print('FastAPI app loaded successfully')"
 
   deploy:
     needs: test
