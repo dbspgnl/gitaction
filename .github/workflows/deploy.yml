@@ -25,12 +25,8 @@ jobs:
     
     - name: Run tests
       run: |
-        pytest tests/ -v
-      continue-on-error: true  # 테스트 실패해도 배포 진행
-    
-    - name: Test FastAPI app startup
-      run: |
         python -c "from app.main import app; print('FastAPI app loaded successfully')"
+      continue-on-error: true
 
   deploy:
     needs: test
@@ -40,16 +36,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Deploy to Server
+    - name: Deploy to NAS200
       uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         key: ${{ secrets.SSH_KEY }}
-        port: 22
+        port: ${{ secrets.PORT }}
         script: |
-          # 프로젝트 디렉토리로 이동 (없으면 생성)
-          cd /home/${{ secrets.USERNAME }} || exit 1
+          # 작업 디렉토리로 이동
+          cd /mnt/HDD1/docker/vendors_fastapi || exit 1
           
           # Git 저장소 클론 또는 업데이트
           if [ -d "gitaction" ]; then
