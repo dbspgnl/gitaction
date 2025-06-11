@@ -144,11 +144,6 @@ cython_debug/
 *.log
 logs/
 
-# Docker
-.dockerignore
-Dockerfile
-docker-compose*.yml
-
 # OS generated files
 .DS_Store
 .DS_Store?
