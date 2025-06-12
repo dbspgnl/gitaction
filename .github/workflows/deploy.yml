@@ -1,78 +1,21 @@
-name: FastAPI CI/CD
-
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python 3.12
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Run tests
-      run: |
-        python -c "from app.main import app; print('FastAPI app loaded successfully')"
-      continue-on-error: true
-
-  deploy:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
-    
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Deploy to NAS200
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
-        port: ${{ secrets.PORT }}
-        script: |
-          # 작업 디렉토리로 이동
-          cd /mnt/HDD1/docker/vendors_fastapi || exit 1
-          
-          # Git 저장소 클론 또는 업데이트
-          if [ -d "gitaction" ]; then
-            cd gitaction
-            git pull origin master
-          else
-            git clone https://github.com/dbspgnl/gitaction.git
-            cd gitaction
-          fi
-          
-          # 기존 컨테이너 중지 및 제거
-          docker stop fastapi-app || true
-          docker rm fastapi-app || true
-          
-          # Docker 이미지 빌드
-          docker build -t fastapi-app .
-          
-          # 새 컨테이너 실행
-          docker run -d \
-            --name fastapi-app \
-            -p 8000:8000 \
-            --restart unless-stopped \
-            fastapi-app
-          
-          # 컨테이너 상태 확인
-          sleep 5
-          docker ps | grep fastapi-app
-          
-          # 헬스 체크
-          curl -f http://localhost:8000/health || echo "Health check failed"
+script: |
+  cd /mnt/HDD1/docker/vendors_fastapi
+  
+  # Dockerfile이 있는지 확인하고 없으면 생성
+  if [ ! -f "Dockerfile" ]; then
+    cat > Dockerfile << 'EOF'
+  FROM python:3.12-slim
+  RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+  WORKDIR /app
+  RUN git clone https://github.com/dbspgnl/gitaction.git /app/source
+  COPY requirements.txt .
+  RUN pip install --no-cache-dir -r requirements.txt
+  EXPOSE 8000
+  CMD ["sh", "-c", "cd /app/source && git pull origin master && cp -r * /app/ && cd /app && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+  EOF
+  fi
+  
+  docker stop fastapi-app || true
+  docker rm fastapi-app || true
+  docker build -t fastapi-app .
+  docker run -d --name fastapi-app -p 8000:8000 --restart unless-stopped fastapi-app
