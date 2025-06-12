@@ -41,7 +41,7 @@ jobs:
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
-        key: ${{ secrets.SSH_KEY }}
+        key: ${{ secrets.PASSWORD }}
         port: ${{ secrets.PORT }}
         script: |
           # 작업 디렉토리로 이동
